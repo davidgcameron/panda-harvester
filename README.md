@@ -195,7 +195,7 @@ $ python lib/python*/site-packages/pandaharvester/harvesterbody/Master.py --pid 
 $ module load python
 $ module load virtualenv
 ```
-* For OLCF
+* For OLCF (Titan)
 ```sh
 module load python_virtualenv/12.0.7
 module load python_setuptools/14.0
