@@ -297,6 +297,38 @@ class DBProxy:
             # return
             return None
 
+    # get jobs (fetch entire jobTable)
+    def get_jobs(self):
+        try:
+            # get logger
+            tmpLog = core_utils.make_logger(_logger)
+            tmpLog.debug('start')
+            # sql to get job
+            sql = "SELECT {0} FROM {1} ".format(JobSpec.column_names(), jobTableName)
+            sql += "WHERE PandaID IS NOT NULL"
+            # get jobs
+            varMap = None
+            self.execute(sql, varMap)
+            resJobs = self.cur.fetchall()
+            if resJobs is None:
+                return None
+            jobSpecList=[]
+            # make jobs list
+            for resJ in resJobs:
+                jobSpec = JobSpec()
+                jobSpec.pack(resJ)
+                jobSpecList.append(jobSpec)
+            tmpLog.debug('done')
+            # return
+            return jobSpecList
+        except:
+            # roll back
+            self.rollback()
+            # dump error
+            core_utils.dump_error_message(_logger)
+            # return
+            return None
+
     # update job
     def update_job(self, jobspec, criteria=None):
         try:
@@ -379,6 +411,19 @@ class DBProxy:
             # get logger
             tmpLog = core_utils.make_logger(_logger)
             tmpLog.debug('start')
+            # get existing queues
+            sqlE = "SELECT queueName FROM {0} ".format(pandaQueueTableName)
+            varMap = dict()
+            self.execute(sqlE, varMap)
+            resE = self.cur.fetchall()
+            for queueName, in resE:
+                # delete if not listed in cfg
+                if queueName not in panda_queue_list:
+                    sqlD = "DELETE FROM {0} ".format(pandaQueueTableName)
+                    sqlD += "WHERE queueName=:queueName "
+                    varMap = dict()
+                    varMap[':queueName'] = queueName
+                    self.execute(sqlD, varMap)
             # loop over queues
             for queueName in panda_queue_list:
                 queueConfig = queue_config_mapper.get_queue(queueName)
