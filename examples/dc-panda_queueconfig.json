@@ -1,0 +1,37 @@
+{
+"ARC-TEST": {
+        "prodSourceLabel": "prod_test",
+        "nQueueLimitJob": 1,
+        "nQueueLimitWorker": 1,
+        "maxWorkers": 1,
+        "mapType": "OneToOne",
+        "useJobLateBinding": false,	
+        "preparator": {
+                "name": "DummyPreparator",
+                "module": "pandaharvester.harvesterpreparator.dummy_preparator"
+        },
+        "submitter": {
+                "name": "ACTSubmitter",
+                "module": "pandaharvester.harvestersubmitter.act_submitter",
+                "nCorePerNode": 8,
+                "nCore": 8
+        },
+        "workerMaker": {
+                "name": "SimpleWorkerMaker",
+                "module": "pandaharvester.harvesterworkermaker.simple_worker_maker"
+        },
+        "messenger": {
+                "name": "SharedFileMessenger",
+                "module": "pandaharvester.harvestermessenger.shared_file_messenger",
+                "accessPoint": "/home/dcameron/dev/panda/panda-harvester/harvester/${workerID}"
+        },
+        "stager": {
+                "name": "DummyStager",
+                "module": "pandaharvester.harvesterstager.dummy_stager"
+        },
+        "monitor": {
+                "name": "ACTMonitor",
+                "module": "pandaharvester.harvestermonitor.act_monitor"
+        }
+}
+}
