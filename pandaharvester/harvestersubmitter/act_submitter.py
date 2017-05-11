@@ -1,12 +1,15 @@
-import logging
+import arc
+import urllib
 
 from pandaharvester.harvestercore import core_utils
 from pandaharvester.harvestercore.plugin_base import PluginBase
 
 from act.common.aCTConfig import aCTConfigARC
 from act.common.aCTProxy import aCTProxy
-from act.panda.aCTDBPanda import aCTDBPanda
+from act.atlas.aCTDBPanda import aCTDBPanda
 
+# logger
+baseLogger = core_utils.setup_logger()
 
 # submitter for aCT
 class ACTSubmitter(PluginBase):
@@ -14,26 +17,28 @@ class ACTSubmitter(PluginBase):
     def __init__(self, **kwarg):
         PluginBase.__init__(self, **kwarg)
 
-        # TODO: use harvester logging
-        logging.basicConfig(level=logging.DEBUG)
-        self.log = logging.logger()
-
         # Set up aCT DB connection
+        self.log = core_utils.make_logger(baseLogger, 'aCT submitter')
         self.conf = aCTConfigARC()
         self.actDB = aCTDBPanda(self.log, self.conf.get(["db", "file"]))
 
+        # Get proxy info
+        # TODO: specify DN in conf instead
+        uc = arc.UserConfig()
+        uc.ProxyPath(str(self.conf.get(['voms', 'proxypath'])))
+        cred = arc.Credential(uc)
+        dn = cred.GetIdentityName()
+        self.log.info("Running under DN %s" % dn)
+
         # Set up proxy map (prod/pilot roles)
-        actp = aCTProxy.aCTProxy(self.log)
+        self.proxymap = {}
+        actp = aCTProxy(self.log)
         for role in self.conf.getList(['voms', 'roles', 'item']):
             attr = '/atlas/Role='+role
             proxyid = actp.getProxyId(dn, attr)
             if not proxyid:
-                raise Exception("Proxy with DN "+dn+" and attribute "+attr+" was not found in proxies table")
+                raise Exception("Proxy with DN {0} and attribute {1} was not found in proxies table".format(dn, attr))
 
-            proxyfile = actp.path(dn, attribute=attr)
-            # pilot role is mapped to analysis type
-            if role == 'pilot':
-                role = 'analysis'
             self.proxymap[role] = proxyid
 
 
@@ -42,20 +47,28 @@ class ACTSubmitter(PluginBase):
         retList = []
         for workSpec in workspec_list:
 
+            tmpLog = core_utils.make_logger(baseLogger, 'workerID={0}'.format(workSpec.workerID))
+
             # Assume for aCT that jobs are always pre-fetched (no late-binding)
             for jobSpec in workSpec.get_jobspec_list():
 
+                tmpLog.debug("JobSpec: {0}".format(jobSpec.values_map()))
                 desc = {}
                 desc['pandastatus'] = 'sent'
                 desc['actpandastatus'] = 'sent'
                 desc['siteName'] = jobSpec.computingSite
-                desc['proxyid'] = self.proxymap["TODO: how to get prod/analy queue"]
+                desc['proxyid'] = self.proxymap['pilot' if jobSpec.jobParams['prodSourceLabel'] == 'user' else 'production']
+                desc['sendhb'] = 0 # harvester takes case of heartbeats
 
+                # aCT takes the url-encoded job description (like it gets from panda server)
+                actjobdesc = urllib.urlencode(jobSpec.jobParams)
                 try:
-                    self.actDB.insertJob(jobSpec.PandaID, jobSpec.jobParams, desc)
-                    result = (True, '')
+                    tmpLog.info("Inserting job {0} into aCT DB: {1}".format(jobSpec.PandaID, str(desc)))
+                    batchid = self.actDB.insertJob(jobSpec.PandaID, actjobdesc, desc)['LAST_INSERT_ID()']
+                    tmpLog.info("aCT batch id {0}".format(batchid))
+                    result = (True, str(batchid))
                 except Exception as e:
-                    result = (False, "Failed to insert job into aCT DB: %s" % str(e))
+                    result = (False, "Failed to insert job into aCT DB: {0}".format(str(e)))
 
                 retList.append(result)
 
