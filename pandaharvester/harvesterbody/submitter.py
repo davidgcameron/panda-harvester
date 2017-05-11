@@ -152,6 +152,7 @@ class Submitter(AgentBase):
                         workSpec.mapType = queueConfig.mapType
                         workSpec.submitTime = timeNow
                         workSpec.modificationTime = timeNow
+                        workSpec.batchID = tmpStr
                         # prefetch events
                         if workSpec.hasJob == 1 and workSpec.eventsRequest == WorkSpec.EV_useEvents:
                             workSpec.eventsRequest = WorkSpec.EV_requestEvents
