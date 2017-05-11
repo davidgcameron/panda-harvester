@@ -66,7 +66,8 @@ class ACTSubmitter(PluginBase):
                     tmpLog.info("Inserting job {0} into aCT DB: {1}".format(jobSpec.PandaID, str(desc)))
                     batchid = self.actDB.insertJob(jobSpec.PandaID, actjobdesc, desc)['LAST_INSERT_ID()']
                     tmpLog.info("aCT batch id {0}".format(batchid))
-                    result = (True, str(batchid))
+                    workSpec.batchID = str(batchid)
+                    result = (True, '')
                 except Exception as e:
                     result = (False, "Failed to insert job into aCT DB: {0}".format(str(e)))
 
