@@ -11,9 +11,6 @@ from pandaharvester.harvestercore.event_spec import EventSpec
 from pandaharvester.harvestercore.plugin_base import PluginBase
 from pandaharvester.harvesterconfig import harvester_config
 
-# logger
-_logger = core_utils.setup_logger()
-
 # json for worker attributes
 jsonAttrsFileName = harvester_config.payload_interaction.workerAttributesFile
 
@@ -44,8 +41,19 @@ jsonEventsUpdateFileName = harvester_config.payload_interaction.updateEventsFile
 # PFC for input files
 xmlPoolCatalogFileName = harvester_config.payload_interaction.xmlPoolCatalogFile
 
+# json to get PandaIDs
+pandaIDsFile = harvester_config.payload_interaction.pandaIDsFile
+
 # suffix to read json
 suffixReadJson = '.read'
+
+# logger
+_logger = core_utils.setup_logger()
+
+
+def set_logger(master_logger):
+    global _logger
+    _logger = master_logger
 
 
 # messenger with shared file system
@@ -189,7 +197,10 @@ class SharedFileMessenger(PluginBase):
                     tmpFileDict['path'] = pfn
                     tmpFileDict['fsize'] = os.stat(pfn).st_size
                     tmpFileDict['type'] = tmpEventInfo['type']
-                    if 'isZip' in tmpEventInfo:
+                    if tmpEventInfo['type'] in ['log', 'output']:
+                        # disable zipping
+                        tmpFileDict['isZip'] = 0
+                    elif 'isZip' in tmpEventInfo:
                         tmpFileDict['isZip'] = tmpEventInfo['isZip']
                     # get checksum
                     if 'chksum' not in tmpEventInfo:
@@ -412,6 +423,10 @@ class SharedFileMessenger(PluginBase):
         tmpLog = core_utils.make_logger(_logger, 'workerID={0}'.format(workspec.workerID))
         if map_type == WorkSpec.MT_OneToOne:
             jobSpec = jobspec_list[0]
+            # check if log is already there
+            for fileSpec in jobSpec.outFiles:
+                if fileSpec.fileType == 'log':
+                    return
             logFileInfo = jobSpec.get_logfile_info()
             # make log.tar.gz
             logFilePath = os.path.join(workspec.get_access_point(), logFileInfo['lfn'])
@@ -425,7 +440,7 @@ class SharedFileMessenger(PluginBase):
                         tmpFullPath = os.path.join(tmpRoot, tmpFile)
                         tmpRelPath = re.sub(accessPoint+'/*', '', tmpFullPath)
                         tmpTarFile.add(tmpFullPath, arcname=tmpRelPath)
-            # make json
+            # make json to stage-out the log file
             fileDict = dict()
             fileDict[jobSpec.PandaID] = dict()
             fileDict[jobSpec.PandaID][logFileInfo['lfn']] = {'path': logFilePath,
@@ -433,7 +448,28 @@ class SharedFileMessenger(PluginBase):
                                                              'isZip': 0}
             jsonFilePath = os.path.join(workspec.get_access_point(), jsonOutputsFileName)
             with open(jsonFilePath, 'w') as jsonFile:
-                json.dump(fileDict, jsonFile)
+                json.dump([fileDict], jsonFile)
         else:
             # FIXME
             pass
+
+    # tell PandaIDs for pull model
+    def get_panda_ids(self, workspec):
+        # get logger
+        tmpLog = core_utils.make_logger(_logger, 'workerID={0}'.format(workspec.workerID))
+        # look for the json just under the access point
+        jsonFilePath = os.path.join(workspec.get_access_point(), pandaIDsFile)
+        tmpLog.debug('looking for PandaID file {0}'.format(jsonFilePath))
+        retVal = []
+        if not os.path.exists(jsonFilePath):
+            # not found
+            tmpLog.debug('not found')
+            return retVal
+        try:
+            with open(jsonFilePath) as jsonFile:
+                retVal = json.load(jsonFile)
+        except:
+            tmpLog.debug('failed to load json')
+            return retVal
+        tmpLog.debug('found')
+        return retVal
