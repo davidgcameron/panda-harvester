@@ -41,7 +41,7 @@ class ACTMonitor(PluginBase):
                 continue
 
             if not actjobs:
-                tmpLog.error("Job with id {1} not found in aCT".format(workSpec.batchID))
+                tmpLog.error("Job with id {0} not found in aCT".format(workSpec.batchID))
                 # send back current status
                 retList.append((WorkSpec.ST_failed, "Job not found in aCT"))
                 continue
