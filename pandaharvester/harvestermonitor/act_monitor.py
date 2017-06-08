@@ -55,7 +55,7 @@ class ACTMonitor(PluginBase):
             elif actstatus == 'donefailed':
                 newStatus = WorkSpec.ST_failed
             elif actstatus == 'donecancelled':
-                newStatus = WokrSpec.ST_cancelled
+                newStatus = WorkSpec.ST_cancelled
 
             tmpLog.debug('batchStatus {0} -> workerStatus {1}'.format(actstatus, newStatus))
             retList.append((newStatus, ''))
