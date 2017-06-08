@@ -24,7 +24,8 @@ class ACTSubmitter(PluginBase):
 
         # Get proxy info
         # TODO: specify DN in conf instead
-        uc = arc.UserConfig()
+        cred_type = arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
+        uc = arc.UserConfig(cred_type)
         uc.ProxyPath(str(self.conf.get(['voms', 'proxypath'])))
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
@@ -58,7 +59,10 @@ class ACTSubmitter(PluginBase):
                 desc['actpandastatus'] = 'sent'
                 desc['siteName'] = jobSpec.computingSite
                 desc['proxyid'] = self.proxymap['pilot' if jobSpec.jobParams['prodSourceLabel'] == 'user' else 'production']
-                desc['sendhb'] = 0 # harvester takes case of heartbeats
+                try:
+                    desc['sendhb'] = 'running' in self.noHeartbeat
+                except:
+                    desc['sendhb'] = 0
 
                 # aCT takes the url-encoded job description (like it gets from panda server)
                 actjobdesc = urllib.urlencode(jobSpec.jobParams)
