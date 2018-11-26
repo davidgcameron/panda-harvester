@@ -116,8 +116,9 @@ class Apfmon:
                             tmp_log.warning('No site info for {0}'.format(site))
                             continue
 
-                        if not site_info['queues']:
-                            # when no CEs associated to a queue, e.g. P1, HPCs, etc. Try to see if there is something
+                        if not site_info['queues'] or self.queue_config_mapper.queueConfig[site].submitter['name'] == 'ACTSubmitter':
+                            # when no CEs associated to a queue, e.g. P1, HPCs, etc. or submitter
+                            # chooses between CEs, e.g. aCT, try to see if there is something
                             # in local configuration, otherwise set it to a dummy value
                             try:
                                 ce = self.queue_config_mapper.queueConfig[site].submitter['ceEndpoint']
@@ -128,7 +129,7 @@ class Apfmon:
                             queues = site_info['queues']
 
                         for queue in queues:
-                            ce = queue['ce_endpoint'].split('.')[0]
+                            ce = queue['ce_endpoint'].split('.')[0].split('/')[-1]
                             labels.append({'name': '{0}-{1}'.format(site, ce),
                                            'wmsqueue': site,
                                            'factory': self.harvester_id})
@@ -170,8 +171,9 @@ class Apfmon:
                 tmp_log.warning('No site info for {0}'.format(site))
                 return
 
-            if not site_info['queues']:
-                # when no CEs associated to a queue, e.g. P1, HPCs, etc. Try to see if there is something
+            if not site_info['queues'] or self.queue_config_mapper.queueConfig[site].submitter['name'] == 'ACTSubmitter':
+                # when no CEs associated to a queue, e.g. P1, HPCs, etc. or submitter
+                # chooses between CEs, e.g. aCT, try to see if there is something
                 # in local configuration, otherwise set it to a dummy value
                 try:
                     ce = self.queue_config_mapper.queueConfig[site].submitter['ceEndpoint']
@@ -183,7 +185,7 @@ class Apfmon:
 
             for queue in queues:
                 try:
-                    ce = queue['ce_endpoint'].split('.')[0]
+                    ce = queue['ce_endpoint'].split('.')[0].split('/')[-1]
                     label_data = {'status': msg}
                     label = '{0}-{1}'.format(site, ce)
                     label_id = '{0}:{1}'.format(self.harvester_id, label)
@@ -223,9 +225,9 @@ class Apfmon:
                     factory = self.harvester_id
                     computingsite = worker_spec.computingSite
                     try:
-                        ce = worker_spec.computingElement.split('.')[0]
+                        ce = worker_spec.computingElement.split('.')[0].split('/')[-1]
                     except AttributeError:
-                        ce = ''
+                        ce = NO_CE
 
                     # extract the log URLs
                     stdout_url = ''
@@ -237,11 +239,11 @@ class Apfmon:
                     if work_attribs:
                         if 'stdOut' in work_attribs:
                             stdout_url = work_attribs['stdOut']
-                            jdl_url = '{0}.jdl'.format(log_url[:-4])
                         if 'stdErr' in work_attribs:
                             stderr_url = work_attribs['stdErr']
                         if 'batchLog' in work_attribs:
                             log_url = work_attribs['batchLog']
+                            jdl_url = '{0}.jdl'.format(log_url[:-4])
 
                     apfmon_worker = {'cid': batch_id,
                                      'factory': factory,
