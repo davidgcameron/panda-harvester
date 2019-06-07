@@ -5,6 +5,7 @@ import datetime
 import threading
 import importlib
 import six
+import random
 from future.utils import iteritems
 
 try:
@@ -78,6 +79,8 @@ class QueueConfig(object):
     def get_source_label(self):
         if self.queueStatus == 'test':
             return 'test'
+        if random.randint(1, 100) == 1:
+            return random.choice(['rc_test', 'rc_test2', 'rc_alrb'])
         return self.prodSourceLabel
 
     # set unique name

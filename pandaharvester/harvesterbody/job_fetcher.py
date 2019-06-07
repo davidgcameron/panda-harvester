@@ -45,11 +45,11 @@ class JobFetcher(AgentBase):
                 if nJobs > harvester_config.jobfetcher.maxJobs:
                     nJobs = harvester_config.jobfetcher.maxJobs
                 # get jobs
-                tmpLog.debug('getting {0} jobs'.format(nJobs))
+                prodSourceLabel = queueConfig.get_source_label()
+                tmpLog.debug('getting {0} jobs for prodSourceLabel {1}'.format(nJobs, prodSourceLabel))
                 sw = core_utils.get_stopwatch()
                 siteName = queueConfig.siteName
-                jobs, errStr = self.communicator.get_jobs(siteName, self.nodeName,
-                                                          queueConfig.get_source_label(),
+                jobs, errStr = self.communicator.get_jobs(siteName, self.nodeName, prodSourceLabel,
                                                           self.nodeName, nJobs,
                                                           queueConfig.getJobCriteria)
                 tmpLog.info('got {0} jobs with {1} {2}'.format(len(jobs), errStr, sw.get_elapsed_time()))
